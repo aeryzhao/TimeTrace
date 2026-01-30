@@ -1,0 +1,17 @@
+# General
+.DS_Store
+.idea/
+.vscode/
+
+# Server (Go)
+server/server
+server/timetrace.db
+server/timetrace.db-journal
+server/timetrace.db-wal
+server/timetrace.db-shm
+server/*.exe
+server/*.test
+server/vendor/
+
+# Node (in case dependencies are installed in root later)
+node_modules/
