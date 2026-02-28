@@ -15,3 +15,5 @@ server/vendor/
 
 # Node (in case dependencies are installed in root later)
 node_modules/
+
+*.log
