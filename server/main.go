@@ -1,12 +1,15 @@
 package main
 
 import (
+	"errors"
 	"net/http"
+	"strings"
 	"timetrace/database"
 	"timetrace/models"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -105,7 +108,7 @@ func deleteCategory(c *gin.Context) {
 
 func getActivities(c *gin.Context) {
 	var activities []models.Activity
-	database.DB.Preload("Category").Find(&activities)
+	database.DB.Preload("Category").Order("pinned desc").Order("updated_at desc").Order("id desc").Find(&activities)
 	c.JSON(http.StatusOK, activities)
 }
 
@@ -168,11 +171,17 @@ func getCurrentTimer(c *gin.Context) {
 
 func startTimer(c *gin.Context) {
 	var req struct {
-		ActivityID uint   `json:"activity_id"`
-		Note       string `json:"note"`
+		ActivityName string `json:"activity_name"`
+		CategoryID   *uint  `json:"category_id"`
+		Note         string `json:"note"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	req.ActivityName = strings.TrimSpace(req.ActivityName)
+	if req.ActivityName == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "activity_name is required"})
 		return
 	}
 
@@ -189,19 +198,42 @@ func startTimer(c *gin.Context) {
 		}
 	}
 
-	// 2. Get Activity to fill CategoryID
 	var activity models.Activity
-	if err := tx.First(&activity, req.ActivityID).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Activity not found"})
-		return
+	categoryID := uint(0)
+	if req.CategoryID != nil {
+		categoryID = *req.CategoryID
 	}
 
-	// 3. Create new entry
+	err := tx.Where("user_id = ? AND name = ? AND category_id = ?", 1, req.ActivityName, categoryID).First(&activity).Error
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query activity"})
+			return
+		}
+
+		activity = models.Activity{
+			UserID:     1,
+			CategoryID: categoryID,
+			Name:       req.ActivityName,
+		}
+		if err := tx.Create(&activity).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create activity"})
+			return
+		}
+	} else {
+		if err := tx.Model(&activity).Update("updated_at", time.Now()).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update activity"})
+			return
+		}
+	}
+
 	newEntry := models.TimeEntry{
 		UserID:     1,
 		CategoryID: activity.CategoryID,
-		ActivityID: req.ActivityID,
+		ActivityID: activity.ID,
 		StartTime:  time.Now(),
 		Note:       req.Note,
 	}
@@ -212,8 +244,16 @@ func startTimer(c *gin.Context) {
 		return
 	}
 
-	tx.Commit()
-	// Reload to get preloads if needed, or just return
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit timer"})
+		return
+	}
+
+	if err := database.DB.Preload("Activity").Preload("Category").First(&newEntry, newEntry.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load timer entry"})
+		return
+	}
+
 	c.JSON(http.StatusOK, newEntry)
 }
 
@@ -391,7 +431,7 @@ func getDailyReport(c *gin.Context) {
 		totalDuration += duration
 		
 		// Category
-		cName := "Unknown"
+		cName := "未分类"
 		cColor := ""
 		if e.Category.Name != "" {
 			cName = e.Category.Name
@@ -403,7 +443,7 @@ func getDailyReport(c *gin.Context) {
 		catStats[cName].Duration += duration
 		
 		// Activity
-		aName := "Unknown"
+		aName := "未命名活动"
 		if e.Activity.Name != "" {
 			aName = e.Activity.Name
 		}

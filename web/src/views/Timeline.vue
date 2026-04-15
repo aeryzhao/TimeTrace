@@ -93,7 +93,7 @@ const formatDuration = (start, end) => {
           <template #default="{ row }">
             <div class="activity-cell">
               <el-tag size="small" :color="row.category?.color" effect="dark" style="border:none; margin-right: 5px">
-                {{ row.category?.name }}
+                {{ row.category?.name || '未分类' }}
               </el-tag>
               <span class="act-name">{{ row.activity?.name }}</span>
             </div>

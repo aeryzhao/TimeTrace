@@ -14,7 +14,11 @@ export const deleteActivity = (id) => api.delete(`/activities/${id}`)
 export const pinActivity = (id) => api.post(`/activities/${id}/pin`)
 
 export const getCurrentTimer = () => api.get('/timer/current')
-export const startTimer = (activityId, note) => api.post('/timer/start', { activity_id: activityId, note })
+export const startTimer = (activityName, categoryId = null, note = '') => api.post('/timer/start', {
+  activity_name: activityName,
+  category_id: categoryId,
+  note
+})
 export const stopTimer = (endTime) => api.post('/timer/stop', { end_time: endTime })
 
 export const getTimeEntries = (from, to) => api.get('/time-entries', { params: { from, to } })

@@ -31,11 +31,17 @@ export const useTimerStore = defineStore('timer', () => {
     }
   }
 
-  async function start(activityId, note = '') {
+  async function start(activityName, categoryId = null, note = '') {
+    if (!activityName?.trim()) {
+      ElMessage.warning('请输入活动名称')
+      return
+    }
+
     try {
       loading.value = true
-      const res = await startTimer(activityId, note)
+      const res = await startTimer(activityName.trim(), categoryId, note)
       currentEntry.value = res.data
+      await fetchMeta()
       ElMessage.success('已开始计时')
     } catch (e) {
       ElMessage.error('开始计时失败')
