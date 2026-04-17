@@ -1,0 +1,26 @@
+services:
+  server:
+    build:
+      context: ./server
+    container_name: timetrace-server
+    restart: unless-stopped
+    environment:
+      TIMETRACE_DB_PATH: /app/data/timetrace.db
+      GIN_MODE: release
+    volumes:
+      - timetrace-data:/app/data
+    expose:
+      - "8080"
+
+  web:
+    build:
+      context: ./web
+    container_name: timetrace-web
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "5173:80"
+
+volumes:
+  timetrace-data:
