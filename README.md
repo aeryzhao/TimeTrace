@@ -9,7 +9,7 @@
 ``` shell
 ./run.sh start
 ```
-- 检查并清理已被占用的端口（8080 和 5173）。
+- 检查并清理已被占用的端口（8081 和 5181）。
 - 后台启动 Go 后端服务，日志输出到 server.log 。
 - 后台启动 Vue 前端服务，日志输出到 web.log 。
 
@@ -43,7 +43,7 @@ docker compose down
 
 访问地址：
 
-- 前端：`http://localhost:5173`
+- 前端：`http://localhost:5181`
 - 后端：通过前端同源代理访问 `/api/v1`
 
 说明：
@@ -54,5 +54,5 @@ docker compose down
 
 ## 开发说明
 
-- 本地 `web` 开发环境已通过 Vite 代理 `/api` 到 `http://localhost:8080`。
+- 本地 `web` 开发环境已通过 Vite 代理 `/api` 到 `http://localhost:8081`。
 - 前端默认请求同源 `/api/v1`，也可通过 `VITE_API_BASE_URL` 环境变量覆盖。

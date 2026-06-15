@@ -3,8 +3,8 @@
 # Configuration
 SERVER_DIR="server"
 WEB_DIR="web"
-SERVER_PORT=8080
-WEB_PORT=5173
+SERVER_PORT=8081
+WEB_PORT=5181
 SERVER_LOG="server.log"
 WEB_LOG="web.log"
 

@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 	"timetrace/database"
 	"timetrace/models"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -63,12 +63,12 @@ func main() {
 		api.POST("/time-entries", createTimeEntry)
 		api.PATCH("/time-entries/:id", updateTimeEntry)
 		api.DELETE("/time-entries/:id", deleteTimeEntry)
-		
+
 		// Reports
 		api.GET("/reports/daily", getDailyReport)
 	}
 
-	r.Run(":8080")
+	r.Run(":8081")
 }
 
 // --- Handlers (To be refactored into separate files) ---
@@ -89,7 +89,7 @@ func createCategory(c *gin.Context) {
 	if category.UserID == 0 {
 		category.UserID = 1
 	}
-	
+
 	if err := database.DB.Create(&category).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -144,8 +144,8 @@ func pinActivity(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Activity not found"})
 		return
 	}
-	
-	// Toggle pin or set to 1? PRD says POST /pin, usually implies pinning. 
+
+	// Toggle pin or set to 1? PRD says POST /pin, usually implies pinning.
 	// Let's assume toggle or set true. For now set to 1 (pinned).
 	// But let's check body if we want to support unpin.
 	// For MVP simplicity: Toggle
@@ -153,7 +153,7 @@ func pinActivity(c *gin.Context) {
 	if activity.Pinned == 1 {
 		newPin = 0
 	}
-	
+
 	database.DB.Model(&activity).Update("pinned", newPin)
 	c.JSON(http.StatusOK, gin.H{"pinned": newPin})
 }
@@ -278,7 +278,7 @@ func stopTimer(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to stop timer"})
 		return
 	}
-	
+
 	// Return the full object
 	current.EndTime = &endTime
 	c.JSON(http.StatusOK, current)
@@ -288,9 +288,9 @@ func getTimeEntries(c *gin.Context) {
 	// Query params from/to
 	fromStr := c.Query("from")
 	toStr := c.Query("to")
-	
+
 	db := database.DB.Preload("Activity").Preload("Category").Where("user_id = ?", 1)
-	
+
 	if fromStr != "" {
 		// Parse
 		if t, err := time.Parse("2006-01-02", fromStr); err == nil {
@@ -304,7 +304,7 @@ func getTimeEntries(c *gin.Context) {
 			db = db.Where("start_time < ?", t)
 		}
 	}
-	
+
 	var entries []models.TimeEntry
 	db.Order("start_time desc").Find(&entries)
 	c.JSON(http.StatusOK, entries)
@@ -316,18 +316,18 @@ func createTimeEntry(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	// Validation: Start < End
 	if entry.EndTime != nil && !entry.EndTime.After(entry.StartTime) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "End time must be after start time"})
 		return
 	}
-	
+
 	if entry.UserID == 0 {
 		entry.UserID = 1
 	}
 
-	// Fetch category if not provided but activity is? 
+	// Fetch category if not provided but activity is?
 	// Ideally frontend sends both, or we look it up.
 	if entry.CategoryID == 0 && entry.ActivityID != 0 {
 		var act models.Activity
@@ -356,7 +356,7 @@ func updateTimeEntry(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	// Update allowed fields
 	updates := make(map[string]interface{})
 	if req.ActivityID != 0 {
@@ -376,7 +376,7 @@ func updateTimeEntry(c *gin.Context) {
 	if req.Note != "" {
 		updates["note"] = req.Note
 	}
-	
+
 	if err := database.DB.Model(&entry).Updates(updates).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -398,27 +398,27 @@ func getDailyReport(c *gin.Context) {
 	if dateStr == "" {
 		dateStr = time.Now().Format("2006-01-02")
 	}
-	
+
 	start, _ := time.Parse("2006-01-02", dateStr)
 	end := start.Add(24 * time.Hour)
-	
+
 	var entries []models.TimeEntry
 	database.DB.Preload("Category").Preload("Activity").
 		Where("user_id = ? AND start_time >= ? AND start_time < ?", 1, start, end).
 		Find(&entries)
-		
+
 	// Aggregate
 	type Stat struct {
-		Name     string `json:"name"`
+		Name     string  `json:"name"`
 		Duration float64 `json:"duration"` // Seconds
-		Color    string `json:"color"`
+		Color    string  `json:"color"`
 	}
-	
+
 	catStats := make(map[string]*Stat)
 	actStats := make(map[string]*Stat)
-	
+
 	totalDuration := 0.0
-	
+
 	for _, e := range entries {
 		var duration float64
 		if e.EndTime != nil {
@@ -427,9 +427,9 @@ func getDailyReport(c *gin.Context) {
 			// Running
 			duration = time.Since(e.StartTime).Seconds()
 		}
-		
+
 		totalDuration += duration
-		
+
 		// Category
 		cName := "未分类"
 		cColor := ""
@@ -441,7 +441,7 @@ func getDailyReport(c *gin.Context) {
 			catStats[cName] = &Stat{Name: cName, Duration: 0, Color: cColor}
 		}
 		catStats[cName].Duration += duration
-		
+
 		// Activity
 		aName := "未命名活动"
 		if e.Activity.Name != "" {
@@ -452,7 +452,7 @@ func getDailyReport(c *gin.Context) {
 		}
 		actStats[aName].Duration += duration
 	}
-	
+
 	cList := make([]Stat, 0, len(catStats))
 	for _, v := range catStats {
 		cList = append(cList, *v)
@@ -461,11 +461,11 @@ func getDailyReport(c *gin.Context) {
 	for _, v := range actStats {
 		aList = append(aList, *v)
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
-		"date": dateStr,
+		"date":           dateStr,
 		"total_duration": totalDuration,
-		"by_category": cList,
-		"by_activity": aList,
+		"by_category":    cList,
+		"by_activity":    aList,
 	})
 }

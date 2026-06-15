@@ -19,6 +19,6 @@ ENV TIMETRACE_DB_PATH=/app/data/timetrace.db
 
 RUN mkdir -p /app/data
 
-EXPOSE 8080
+EXPOSE 8081
 
 CMD ["timetrace-server"]
