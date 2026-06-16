@@ -1,35 +1,32 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useTimerStore } from '../stores/timer'
-import { VideoPlay, VideoPause, Plus, EditPen } from '@element-plus/icons-vue'
+import { VideoPlay, VideoPause, Plus, EditPen, Search } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 
 const store = useTimerStore()
 const elapsedTime = ref('00:00:00')
-const quickForm = ref({
-  name: '',
-  category_id: null
-})
+const quickForm = ref({ name: '', category_id: null })
 const searchQuery = ref('')
 let timerInterval = null
 
 const filteredActivities = computed(() => {
   if (!searchQuery.value) return store.activities
   const q = searchQuery.value.toLowerCase()
-  return store.activities.filter(a => a.name.toLowerCase().includes(q) || a.category?.name?.toLowerCase().includes(q))
+  return store.activities.filter(a =>
+    a.name.toLowerCase().includes(q) || a.category?.name?.toLowerCase().includes(q)
+  )
 })
 
 const quickSuggestions = computed(() => store.activities.slice(0, 8))
 
 const updateTicker = () => {
-  if (store.currentEntry && store.currentEntry.start_time) {
-    const start = dayjs(store.currentEntry.start_time)
-    const now = dayjs()
-    const diff = now.diff(start, 'second')
+  if (store.currentEntry?.start_time) {
+    const diff = dayjs().diff(dayjs(store.currentEntry.start_time), 'second')
     const h = Math.floor(diff / 3600)
     const m = Math.floor((diff % 3600) / 60)
     const s = diff % 60
-    elapsedTime.value = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+    elapsedTime.value = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
   } else {
     elapsedTime.value = '00:00:00'
   }
@@ -42,15 +39,12 @@ onMounted(async () => {
   updateTicker()
 })
 
-onUnmounted(() => {
-  if (timerInterval) clearInterval(timerInterval)
-})
+onUnmounted(() => clearInterval(timerInterval))
 
-const handleStart = (activity) => {
-  store.start(activity.name, activity.category_id || null)
-}
+const handleStart = (activity) => store.start(activity.name, activity.category_id || null)
 
 const handleQuickStart = async () => {
+  if (!quickForm.value.name.trim()) return
   await store.start(quickForm.value.name, quickForm.value.category_id)
   if (store.currentEntry) {
     quickForm.value.name = ''
@@ -63,328 +57,314 @@ const currentCategoryName = computed(() => store.currentEntry?.category?.name ||
 
 <template>
   <div class="dashboard">
-    <el-card class="timer-card" :class="{ 'is-running': store.isRunning }" shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <span>{{ store.isRunning ? '正在进行' : '准备开始' }}</span>
-          <span class="timer-display">{{ elapsedTime }}</span>
-        </div>
-      </template>
-
-      <div v-if="store.isRunning" class="current-activity">
-        <div class="info">
-          <h3>{{ store.currentEntry.activity?.name }}</h3>
-          <el-tag>{{ currentCategoryName }}</el-tag>
-          <p class="start-time">开始于 {{ dayjs(store.currentEntry.start_time).format('HH:mm') }}</p>
-        </div>
-        <el-button type="danger" size="large" circle :icon="VideoPause" @click="store.stop"></el-button>
-      </div>
-      <div v-else class="placeholder">
-        <p>当前没有活动。请在下方输入活动名称后开始。</p>
-      </div>
-    </el-card>
-
-    <div class="section">
-      <h2>开始活动</h2>
-      <el-card class="start-card" shadow="hover">
-        <div class="start-grid">
-          <el-input
-            v-model="quickForm.name"
-            placeholder="输入当前要做的事情，例如：写方案、开会、吃饭"
-            class="start-input"
-            size="large"
-            clearable
-            @keyup.enter="handleQuickStart"
-          >
-            <template #prefix>
-              <el-icon><EditPen /></el-icon>
-            </template>
-          </el-input>
-
-          <el-select
-            v-model="quickForm.category_id"
-            placeholder="选择分类（可选）"
-            clearable
-            filterable
-            class="start-select"
-            size="large"
-          >
-            <el-option
-              v-for="category in store.categories"
-              :key="category.id"
-              :label="category.name"
-              :value="category.id"
-            />
-          </el-select>
-
-          <el-button
-            type="primary"
-            size="large"
-            :icon="VideoPlay"
-            class="start-btn"
-            @click="handleQuickStart"
-          >
-            开始计时
-          </el-button>
-        </div>
-      </el-card>
+    <!-- Page header -->
+    <div class="page-header">
+      <h1 class="page-title">计时台</h1>
+      <p class="page-subtitle">记录你的每一段专注时间</p>
     </div>
 
-    <div class="section" v-if="quickSuggestions.length">
-      <h2>最近活动</h2>
-      <div class="quick-grid">
+    <!-- Timer hero card -->
+    <div class="timer-hero" :class="{ running: store.isRunning }">
+      <div class="timer-left">
+        <div class="timer-status-badge" :class="store.isRunning ? 'badge-running' : 'badge-idle'">
+          <span class="status-dot"></span>
+          {{ store.isRunning ? '进行中' : '待机' }}
+        </div>
+        <div v-if="store.isRunning" class="timer-activity-name">
+          {{ store.currentEntry.activity?.name }}
+        </div>
+        <div v-else class="timer-idle-hint">还没有正在进行的活动</div>
+        <div v-if="store.isRunning" class="timer-meta">
+          <span class="cat-pill" :style="{ background: store.currentEntry.category?.color || '#818CF8' }">
+            {{ currentCategoryName }}
+          </span>
+          <span class="start-hint">{{ dayjs(store.currentEntry.start_time).format('HH:mm') }} 开始</span>
+        </div>
+      </div>
+      <div class="timer-right">
+        <div class="timer-display">{{ elapsedTime }}</div>
         <el-button
+          v-if="store.isRunning"
+          class="timer-btn stop-btn"
+          circle
+          :icon="VideoPause"
+          @click="store.stop"
+        />
+      </div>
+    </div>
+
+    <!-- Quick start -->
+    <div class="section">
+      <h2 class="section-title">开始活动</h2>
+      <div class="start-card">
+        <el-input
+          v-model="quickForm.name"
+          placeholder="输入当前要做的事情，例如：写方案、开会、读书"
+          size="large"
+          clearable
+          @keyup.enter="handleQuickStart"
+        >
+          <template #prefix><el-icon><EditPen /></el-icon></template>
+        </el-input>
+        <el-select
+          v-model="quickForm.category_id"
+          placeholder="选择分类（可选）"
+          clearable
+          filterable
+          size="large"
+        >
+          <el-option
+            v-for="cat in store.categories"
+            :key="cat.id"
+            :label="cat.name"
+            :value="cat.id"
+          />
+        </el-select>
+        <el-button type="primary" size="large" :icon="VideoPlay" @click="handleQuickStart" class="go-btn">
+          开始计时
+        </el-button>
+      </div>
+    </div>
+
+    <!-- Quick suggestions -->
+    <div class="section" v-if="quickSuggestions.length">
+      <h2 class="section-title">最近活动</h2>
+      <div class="quick-grid">
+        <button
           v-for="act in quickSuggestions"
           :key="act.id"
-          class="quick-btn"
-          type="primary"
-          plain
+          class="quick-card"
           @click="handleStart(act)"
         >
-          <span class="quick-btn-name">{{ act.name }}</span>
-          <span v-if="act.category?.name" class="quick-btn-cat">{{ act.category.name }}</span>
-          <span v-else class="quick-btn-cat">未分类</span>
-        </el-button>
-        <el-button :icon="Plus" class="quick-btn dashed" @click="$router.push('/categories')">管理分类</el-button>
+          <span
+            class="quick-dot"
+            :style="{ background: act.category?.color || '#818CF8' }"
+          ></span>
+          <span class="quick-name">{{ act.name }}</span>
+          <span class="quick-cat">{{ act.category?.name || '未分类' }}</span>
+        </button>
+        <button class="quick-card dashed" @click="$router.push('/categories')">
+          <el-icon class="plus-icon"><Plus /></el-icon>
+          <span class="quick-name">管理分类</span>
+        </button>
       </div>
     </div>
 
+    <!-- All activities -->
     <div class="section">
-      <h2>所有活动</h2>
-      <el-input
-        v-model="searchQuery"
-        placeholder="搜索活动..."
-        prefix-icon="Search"
-        class="search-input"
-        size="large"
-      />
-      <div class="activity-list">
-        <el-card
+      <div class="section-row">
+        <h2 class="section-title">所有活动</h2>
+        <el-input
+          v-model="searchQuery"
+          placeholder="搜索活动..."
+          size="default"
+          style="width:240px"
+        >
+          <template #prefix><el-icon><Search /></el-icon></template>
+        </el-input>
+      </div>
+      <div class="activity-grid">
+        <div
           v-for="act in filteredActivities"
           :key="act.id"
-          shadow="hover"
-          class="activity-item"
+          class="activity-card"
           @click="handleStart(act)"
         >
-          <div class="activity-inner">
-            <div class="act-content">
-              <span class="act-name">{{ act.name }}</span>
-              <div class="act-meta">
-                <el-tag size="small" type="info" effect="plain">{{ act.category?.name || '未分类' }}</el-tag>
-              </div>
-            </div>
-            <div class="act-action">
-              <el-icon class="play-icon"><VideoPlay /></el-icon>
-            </div>
+          <div
+            class="act-color-bar"
+            :style="{ background: act.category?.color || '#818CF8' }"
+          ></div>
+          <div class="act-body">
+            <span class="act-name">{{ act.name }}</span>
+            <span class="act-cat">{{ act.category?.name || '未分类' }}</span>
           </div>
-        </el-card>
+          <el-icon class="act-play"><VideoPlay /></el-icon>
+        </div>
+      </div>
+      <div v-if="filteredActivities.length === 0" class="empty-state">
+        <el-icon style="font-size:2rem;color:#cbd5e1"><Search /></el-icon>
+        <p>没有找到匹配的活动</p>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.timer-card {
-  margin-bottom: 30px;
-  text-align: center;
-  transition: all 0.3s;
-  border-radius: 12px;
-}
+.dashboard { max-width: 960px; margin: 0 auto; }
 
-.timer-card.is-running {
-  border-color: var(--el-color-primary);
-  background-color: var(--el-color-primary-light-9);
-}
+.page-header { margin-bottom: 28px; }
+.page-title { font-size: 1.75rem; font-weight: 800; color: #1e293b; margin: 0 0 4px; letter-spacing: -0.5px; }
+.page-subtitle { margin: 0; color: #64748b; font-size: 0.9rem; }
 
-.card-header {
+/* Timer hero */
+.timer-hero {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 28px 32px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 1.2rem;
+  margin-bottom: 36px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.timer-hero.running {
+  border-color: #a5b4fc;
+  box-shadow: 0 0 0 4px #eef2ff, 0 4px 12px rgba(79,70,229,0.1);
+}
+
+.timer-left { display: flex; flex-direction: column; gap: 10px; }
+
+.timer-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
   font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 100px;
+  width: fit-content;
+  letter-spacing: 0.3px;
+}
+.badge-running { background: #d1fae5; color: #065f46; }
+.badge-idle { background: #f1f5f9; color: #64748b; }
+.status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: currentColor;
+}
+.badge-running .status-dot { animation: pulse 1.4s infinite; }
+@keyframes pulse {
+  0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
 }
 
+.timer-activity-name { font-size: 1.6rem; font-weight: 700; color: #1e293b; line-height: 1.2; }
+.timer-idle-hint { font-size: 1rem; color: #94a3b8; }
+
+.timer-meta { display: flex; align-items: center; gap: 10px; }
+.cat-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 100px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #fff;
+}
+.start-hint { font-size: 0.85rem; color: #64748b; }
+
+.timer-right { display: flex; flex-direction: column; align-items: center; gap: 16px; }
 .timer-display {
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-  font-size: 2.2rem;
-  font-weight: bold;
-  color: var(--el-color-primary);
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 3.2rem;
+  font-weight: 700;
+  color: #4F46E5;
+  letter-spacing: 2px;
+  line-height: 1;
 }
 
-.current-activity {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 20px;
+.timer-btn { width: 52px; height: 52px; font-size: 1.4rem; }
+.stop-btn {
+  --el-button-bg-color: #FEF2F2 !important;
+  --el-button-border-color: #FECACA !important;
+  --el-button-text-color: #DC2626 !important;
+  --el-button-hover-bg-color: #FEE2E2 !important;
 }
 
-.current-activity h3 {
-  margin: 0 0 10px 0;
-  font-size: 1.8rem;
-  color: var(--el-text-color-primary);
-}
-
-.start-time {
-  margin-top: 10px;
-  color: var(--el-text-color-secondary);
-  font-size: 0.9rem;
-}
-
-.placeholder {
-  padding: 30px;
-  color: var(--el-text-color-placeholder);
+/* Section */
+.section { margin-bottom: 40px; }
+.section-title {
   font-size: 1rem;
+  font-weight: 700;
+  color: #374151;
+  margin: 0 0 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.8rem;
 }
+.section-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.section-row .section-title { margin-bottom: 0; }
 
-.section {
-  margin-bottom: 40px;
-}
-
-.section h2 {
-  font-size: 1.2rem;
-  margin-bottom: 20px;
-  color: var(--el-text-color-regular);
-  border-left: 4px solid var(--el-color-primary);
-  padding-left: 10px;
-}
-
+/* Start card */
 .start-card {
-  border-radius: 12px;
-}
-
-.start-grid {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px;
   display: grid;
-  grid-template-columns: minmax(0, 1.8fr) minmax(180px, 0.9fr) auto;
-  gap: 14px;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
   align-items: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
+.go-btn { min-width: 120px; }
 
-.start-input,
-.start-select {
-  width: 100%;
-}
-
-.start-btn {
-  min-width: 132px;
-}
-
-.quick-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-}
-
-.quick-btn {
-  width: 160px;
-  min-height: 90px;
-  white-space: normal;
-  line-height: 1.4;
-  font-size: 1rem;
-  border-radius: 10px;
-  transition: transform 0.2s;
+/* Quick grid */
+.quick-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.quick-card {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: center;
-}
-
-.quick-btn-name {
-  font-weight: 600;
-}
-
-.quick-btn-cat {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-  margin-top: 6px;
-}
-
-.quick-btn:hover {
-  transform: translateY(-2px);
-}
-
-.dashed {
-  border-style: dashed;
-  color: var(--el-text-color-secondary);
-}
-
-.search-input {
-  margin-bottom: 20px;
-  max-width: 400px;
-}
-
-.activity-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 20px;
-}
-
-.activity-item {
-  cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.2s;
-  border: 1px solid var(--el-border-color-lighter);
-}
-
-.activity-item:hover {
-  transform: translateY(-2px);
-  border-color: var(--el-color-primary-light-5);
-}
-
-.activity-inner {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-}
-
-.act-content {
-  display: flex;
-  flex-direction: column;
   gap: 6px;
-  flex: 1;
-  min-width: 0;
+  padding: 14px 16px;
+  width: 150px;
+  min-height: 80px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  text-align: left;
+  font-family: inherit;
 }
+.quick-card:hover {
+  border-color: #a5b4fc;
+  box-shadow: 0 4px 12px rgba(79,70,229,0.1);
+  transform: translateY(-2px);
+}
+.quick-card.dashed { border-style: dashed; border-color: #cbd5e1; }
+.quick-card.dashed:hover { border-color: #818cf8; }
+.quick-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.quick-name { font-size: 0.88rem; font-weight: 600; color: #1e293b; line-height: 1.3; }
+.quick-cat { font-size: 0.75rem; color: #94a3b8; }
+.plus-icon { font-size: 1.2rem; color: #94a3b8; margin-bottom: 2px; }
 
-.act-name {
-  font-weight: 600;
-  font-size: 1.1rem;
-  color: var(--el-text-color-primary);
-  white-space: nowrap;
+/* Activity grid */
+.activity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.activity-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
   overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.act-meta {
-  display: flex;
-}
-
-.act-action {
   display: flex;
   align-items: center;
+  gap: 12px;
+  padding: 14px 14px 14px 0;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
 }
-
-.play-icon {
-  font-size: 1.8rem;
-  color: var(--el-color-primary);
-  opacity: 0;
-  transition: all 0.2s;
-  background-color: var(--el-color-primary-light-9);
-  padding: 8px;
-  border-radius: 50%;
+.activity-card:hover {
+  border-color: #a5b4fc;
+  box-shadow: 0 4px 12px rgba(79,70,229,0.1);
+  transform: translateY(-1px);
 }
+.activity-card:hover .act-play { opacity: 1; color: #4F46E5; }
 
-.activity-item:hover .play-icon {
-  opacity: 1;
-  transform: scale(1.1);
-}
+.act-color-bar { width: 4px; align-self: stretch; flex-shrink: 0; border-radius: 0 2px 2px 0; }
+.act-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.act-name { font-size: 0.9rem; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.act-cat { font-size: 0.75rem; color: #94a3b8; }
+.act-play { font-size: 1.2rem; opacity: 0; transition: opacity 0.15s; color: #cbd5e1; flex-shrink: 0; }
 
-@media (max-width: 768px) {
-  .start-grid {
-    grid-template-columns: 1fr;
-  }
+.empty-state { text-align: center; padding: 40px; color: #94a3b8; }
+.empty-state p { margin: 8px 0 0; font-size: 0.9rem; }
 
-  .start-btn {
-    width: 100%;
-  }
+@media (max-width: 640px) {
+  .timer-hero { flex-direction: column; gap: 20px; }
+  .timer-display { font-size: 2.4rem; }
+  .start-card { grid-template-columns: 1fr; }
 }
 </style>

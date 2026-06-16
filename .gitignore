@@ -17,3 +17,6 @@ server/vendor/
 node_modules/
 
 *.log
+
+# Trae
+.trae/

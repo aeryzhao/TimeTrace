@@ -1,9 +1,45 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 html, body {
   margin: 0;
   padding: 0;
-  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
-  background-color: #f5f7fa;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+  background: #f0f2f7;
+  color: #1e293b;
+  -webkit-font-smoothing: antialiased;
 }
+
 #app {
   height: 100vh;
+}
+
+:root {
+  --brand: #4F46E5;
+  --brand-light: #818CF8;
+  --brand-bg: #EEF2FF;
+  --brand-dark: #3730A3;
+  --success: #10B981;
+  --danger: #EF4444;
+  --warn: #F59E0B;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --border: #e2e8f0;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --radius: 12px;
+  --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.07), 0 1px 2px -1px rgba(0,0,0,0.05);
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.05);
+}
+
+/* Override Element Plus primary */
+.el-button--primary {
+  --el-button-bg-color: var(--brand) !important;
+  --el-button-border-color: var(--brand) !important;
+  --el-button-hover-bg-color: var(--brand-dark) !important;
+  --el-button-hover-border-color: var(--brand-dark) !important;
+  --el-button-active-bg-color: var(--brand-dark) !important;
 }
