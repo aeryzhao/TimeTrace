@@ -19,6 +19,8 @@ ENV TIMETRACE_DB_PATH=/app/data/timetrace.db
 
 RUN mkdir -p /app/data
 
+COPY timetrace.db /app/data/timetrace.db
+
 EXPOSE 8081
 
 CMD ["timetrace-server"]
