@@ -66,6 +66,10 @@ func main() {
 
 		// Reports
 		api.GET("/reports/daily", getDailyReport)
+
+		// Settings
+		api.GET("/settings", getSettings)
+		api.PUT("/settings", updateSettings)
 	}
 
 	r.Run(":8081")
@@ -391,6 +395,63 @@ func deleteTimeEntry(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "deleted"})
+}
+
+func getSettings(c *gin.Context) {
+	var settings models.Settings
+	result := database.DB.Where("user_id = ?", 1).First(&settings)
+	if result.Error != nil {
+		// Return defaults if not found
+		c.JSON(http.StatusOK, models.Settings{
+			SoundEnabled:        true,
+			NotificationEnabled: true,
+			ReminderInterval:    25,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, settings)
+}
+
+func updateSettings(c *gin.Context) {
+	var req struct {
+		SoundEnabled        *bool `json:"sound_enabled"`
+		NotificationEnabled *bool `json:"notification_enabled"`
+		ReminderInterval    *int  `json:"reminder_interval"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var settings models.Settings
+	result := database.DB.Where("user_id = ?", 1).First(&settings)
+	if result.Error != nil {
+		// Create new settings
+		settings = models.Settings{
+			UserID:              1,
+			SoundEnabled:        true,
+			NotificationEnabled: true,
+			ReminderInterval:    25,
+		}
+	}
+
+	if req.SoundEnabled != nil {
+		settings.SoundEnabled = *req.SoundEnabled
+	}
+	if req.NotificationEnabled != nil {
+		settings.NotificationEnabled = *req.NotificationEnabled
+	}
+	if req.ReminderInterval != nil {
+		settings.ReminderInterval = *req.ReminderInterval
+	}
+
+	if settings.ID == 0 {
+		database.DB.Create(&settings)
+	} else {
+		database.DB.Save(&settings)
+	}
+
+	c.JSON(http.StatusOK, settings)
 }
 
 func getDailyReport(c *gin.Context) {

@@ -1,6 +1,6 @@
 <script setup>
 import { RouterLink, RouterView, useRoute } from 'vue-router'
-import { Timer, Calendar, PieChart, Collection } from '@element-plus/icons-vue'
+import { Timer, Calendar, PieChart, Collection, Setting } from '@element-plus/icons-vue'
 import { computed } from 'vue'
 
 const route = useRoute()
@@ -9,6 +9,7 @@ const navItems = [
   { path: '/timeline', icon: Calendar, label: '时间轴' },
   { path: '/reports', icon: PieChart, label: '报表' },
   { path: '/categories', icon: Collection, label: '分类管理' },
+  { path: '/settings', icon: Setting, label: '设置' },
 ]
 </script>
 

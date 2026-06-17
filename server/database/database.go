@@ -24,7 +24,7 @@ func Connect() {
 	}
 
 	// Auto Migrate
-	err = DB.AutoMigrate(&models.Category{}, &models.Activity{}, &models.TimeEntry{})
+	err = DB.AutoMigrate(&models.Category{}, &models.Activity{}, &models.TimeEntry{}, &models.Settings{})
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}

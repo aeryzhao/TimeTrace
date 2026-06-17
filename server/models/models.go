@@ -40,3 +40,13 @@ type TimeEntry struct {
 	CreatedAt  time.Time  `json:"created_at"`
 	UpdatedAt  time.Time  `json:"updated_at"`
 }
+
+type Settings struct {
+	ID                   uint `gorm:"primaryKey" json:"id"`
+	UserID               uint `gorm:"not null;default:1;uniqueIndex" json:"user_id"`
+	SoundEnabled         bool `gorm:"not null;default:1" json:"sound_enabled"`
+	NotificationEnabled  bool `gorm:"not null;default:1" json:"notification_enabled"`
+	ReminderInterval     int  `gorm:"not null;default:25" json:"reminder_interval"`
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
+}

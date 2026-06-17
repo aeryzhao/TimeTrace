@@ -30,4 +30,7 @@ export const deleteTimeEntry = (id) => api.delete(`/time-entries/${id}`)
 
 export const getDailyReport = (date) => api.get('/reports/daily', { params: { date } })
 
+export const getSettings = () => api.get('/settings')
+export const updateSettings = (data) => api.put('/settings', data)
+
 export default api

@@ -3,6 +3,7 @@ import Dashboard from '../views/Dashboard.vue'
 import Timeline from '../views/Timeline.vue'
 import Reports from '../views/Reports.vue'
 import Categories from '../views/Categories.vue'
+import Settings from '../views/Settings.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -26,6 +27,11 @@ const router = createRouter({
       path: '/categories',
       name: 'categories',
       component: Categories
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: Settings
     }
   ]
 })

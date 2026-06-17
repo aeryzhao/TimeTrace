@@ -1,14 +1,17 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useTimerStore } from '../stores/timer'
+import { useSettingsStore } from '../stores/settings'
 import { VideoPlay, VideoPause, Plus, EditPen, Search } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 
 const store = useTimerStore()
+const settings = useSettingsStore()
 const elapsedTime = ref('00:00:00')
 const quickForm = ref({ name: '', category_id: null })
 const searchQuery = ref('')
 let timerInterval = null
+let lastReminderMinute = 0
 
 const filteredActivities = computed(() => {
   if (!searchQuery.value) return store.activities
@@ -20,6 +23,21 @@ const filteredActivities = computed(() => {
 
 const quickSuggestions = computed(() => store.activities.slice(0, 8))
 
+const playReminderSound = () => {
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)()
+  const oscillator = audioContext.createOscillator()
+  const gainNode = audioContext.createGain()
+  oscillator.connect(gainNode)
+  gainNode.connect(audioContext.destination)
+  oscillator.frequency.setValueAtTime(800, audioContext.currentTime)
+  oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1)
+  oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2)
+  gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3)
+  oscillator.start(audioContext.currentTime)
+  oscillator.stop(audioContext.currentTime + 0.3)
+}
+
 const updateTicker = () => {
   if (store.currentEntry?.start_time) {
     const diff = dayjs().diff(dayjs(store.currentEntry.start_time), 'second')
@@ -27,16 +45,38 @@ const updateTicker = () => {
     const m = Math.floor((diff % 3600) / 60)
     const s = diff % 60
     elapsedTime.value = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+    
+    const activityName = store.currentEntry.activity?.name || '计时中'
+    const totalMinutes = h * 60 + m
+    document.title = `${String(totalMinutes).padStart(2,'0')}:${String(s).padStart(2,'0')} - ${activityName} | TimeTrace`
+    
+    const interval = settings.reminderInterval
+    if (m > 0 && interval > 0 && m % interval === 0 && s === 0 && m !== lastReminderMinute) {
+      lastReminderMinute = m
+      if (settings.soundEnabled) playReminderSound()
+      const totalMin = h * 60 + m
+      if (settings.notificationEnabled && Notification.permission === 'granted') {
+        new Notification('TimeTrace 提醒', {
+          body: `「${activityName}」已进行 ${totalMin} 分钟`,
+          icon: '/favicon.svg'
+        })
+      }
+    }
   } else {
     elapsedTime.value = '00:00:00'
+    document.title = 'TimeTrace - 时间追踪'
+    lastReminderMinute = 0
   }
 }
 
 onMounted(async () => {
-  await store.fetchMeta()
-  await store.fetchCurrentTimer()
+  await Promise.all([store.fetchMeta(), store.fetchCurrentTimer(), settings.fetchSettings()])
   timerInterval = setInterval(updateTicker, 1000)
   updateTicker()
+  document.title = 'TimeTrace - 时间追踪'
+  if (settings.notificationEnabled && 'Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission()
+  }
 })
 
 onUnmounted(() => clearInterval(timerInterval))
